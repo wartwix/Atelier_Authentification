@@ -2,7 +2,7 @@ name: Industrialisation continue sur le serveur Alwaysdata
 
 on:
   push:
-    branches: [ "main" ] # Vérifiez si votre branche s'appelle 'main' ou 'master'
+    branches: [ "main" ]
 
 jobs:
   Deploy:
@@ -10,59 +10,56 @@ jobs:
     steps:
       - name: Déploiement et Configuration Sécurité
         uses: appleboy/ssh-action@master
+        env:
+          # On récupère le mot de passe en clair (admin) depuis les secrets
+          PASS_CLAIR: ${{ secrets.HTPASSWD_CONTENT }}
         with:
           host: "ssh-${{ secrets.USERNAME }}.alwaysdata.net"
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          
-          # La variable HTPASSWD_CONTENT est injectée directement
-          # dans le script par l'interpolation ${{ secrets.HTPASSWD_CONTENT }}
+          # On passe la variable d'environnement au script
+          envs: PASS_CLAIR
           script: |
-            # 1. Définition des variables
+            # --- CONFIGURATION ---
             REPO_URL="https://github.com/${{ github.repository }}.git"
             TARGET_DIR="$HOME/www"
             CLONE_DIR="$HOME/clone_temp"
 
-            # 2. Nettoyage et Clonage propre
-            echo "🗑️ Nettoyage et clonage du dépôt..."
+            # --- 1. CLONAGE DU SITE ---
             rm -rf $CLONE_DIR
             git clone $REPO_URL $CLONE_DIR
 
-            # 3. Synchronisation (Copie des fichiers vers www)
+            # --- 2. DEPLOIEMENT ---
             mkdir -p $TARGET_DIR
-            
             if [ -d "$CLONE_DIR" ]; then
-              # On copie le contenu du clone vers www
               rsync -r --delete --exclude '.git' $CLONE_DIR/ $TARGET_DIR/
               rm -rf $CLONE_DIR
-              echo "✅ Site mis à jour avec succès."
+              echo "✅ Site mis à jour."
             else
-              echo "❌ Erreur : Le clonage a échoué."
+              echo "❌ Erreur de clonage."
               exit 1
             fi
 
-            # --- PARTIE EXERCICE 3 : GESTION DU .HTPASSWD ---
-            
-            echo "🔒 Configuration de la sécurité (Basic Auth)..."
-            
-            # Création du dossier spécifique atelier1 (si non copié par rsync)
+            # --- 3. SECURITE (Nouvelle méthode) ---
+            echo "🔒 Génération du fichier mot de passe..."
+           
             mkdir -p $TARGET_DIR/atelier1
-            
-            # Création du fichier .htpasswd à partir du SECRET GitHub
-            # L'interpolation du Secret GitHub ${{ secrets.HTPASSWD_CONTENT }}
-            # fonctionne ici car elle est gérée par l'action ssh-action.
-            echo "${{ secrets.HTPASSWD_CONTENT }}" > $TARGET_DIR/atelier1/.htpasswd
-            
-            # 4. Configuration .htaccess (pour l'Exercice 2 et 3)
-            # Ajout des directives de sécurité pour cacher .htpasswd
-            HTACCESS_CONTENT="AuthName \"Acces protege\""$'\n'
-            HTACCESS_CONTENT+="AuthType Basic"$'\n'
-            HTACCESS_CONTENT+="AuthUserFile $TARGET_DIR/atelier1/.htpasswd"$'\n'
-            HTACCESS_CONTENT+="Require valid-user"$'\n'
-            HTACCESS_CONTENT+="<Files \".ht*\">"$'\n'
-            HTACCESS_CONTENT+="Require all denied"$'\n'
-            HTACCESS_CONTENT+="</Files>"
-            
-            # Écriture du .htaccess dans le dossier protégé
-            echo "$HTACCESS_CONTENT" > $TARGET_DIR/atelier1/.htaccess
-            echo "✅ Fichier .htaccess configuré et sécurisé."
+           
+            # Suppression de l'ancien fichier pour éviter les conflits
+            rm -f $TARGET_DIR/atelier1/.htpasswd
+           
+            # UTILISATION DE LA COMMANDE LINUX NATIVE
+            # -c : créer un nouveau fichier
+            # -b : mode batch (on donne le mdp direct)
+            # Syntaxe : htpasswd -cb [fichier] [user] [password]
+            htpasswd -cb $TARGET_DIR/atelier1/.htpasswd admin $PASS_CLAIR
+           
+            # Vérification finale
+            if [ -f "$TARGET_DIR/atelier1/.htpasswd" ]; then
+                echo "✅ Fichier .htpasswd généré avec succès."
+                # Affiche les permissions pour être sûr (optionnel)
+                ls -l $TARGET_DIR/atelier1/.htpasswd
+            else
+                echo "❌ Echec de la création du fichier mot de passe."
+                exit 1
+            fi
