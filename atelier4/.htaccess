@@ -1,3 +1,6 @@
-​
-RewriteEngine On
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+# Activer le moteur d'authentification Basic Auth
+AuthType Basic
+AuthName "Acces restreint a l'Atelier 4"
+# Chemin ABSOLU vers votre fichier .htpasswd (utilisez $HOME si votre hébergeur le supporte)
+AuthUserFile /home/votre_user/.htpasswd 
+Require valid-user
