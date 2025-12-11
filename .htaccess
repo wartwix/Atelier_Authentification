@@ -1,0 +1,4 @@
+AuthName "Acces Restreint"
+AuthType Basic
+AuthUserFile /home/naghshbandy/www/atelier1/.htpasswd
+Require valid-user
