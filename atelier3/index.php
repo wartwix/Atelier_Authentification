@@ -1,52 +1,46 @@
 <?php
-// Démarre la session
 session_start();
 
-// Vérifier si l'utilisateur est déjà connecté
-if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
-    header('Location: page_admin.php'); // Si l'utilisateur s'est déjà connecté alors il sera automatiquement redirigé vers la page protected.php
-    exit();
+// --- Logique du Compteur de Visites (Exercice 2) ---
+
+// Le compteur est stocké en session et persiste tant que la session n'est pas détruite.
+if (!isset($_SESSION['visit_count'])) {
+    // Si c'est la première visite dans la session, initialiser à 1.
+    $_SESSION['visit_count'] = 1;
+} else {
+    // Si la session existe, incrémenter le compteur à chaque affichage de la page.
+    $_SESSION['visit_count']++;
 }
 
-// Gérer le formulaire de connexion
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+$count = $_SESSION['visit_count'];
 
-    // Vérification simple des identifiants (à améliorer avec une base de données)
-    if ($username === 'admin' && $password === 'secret') {
-        // Stocker les informations utilisateur dans la session
-        $_SESSION['loggedin'] = true;
-        $_SESSION['username'] = $username;
-
-        // Rediriger vers la page protégée
-        header('Location: page_admin.php');
-        exit();
-    } else {
-        $error = "Nom d'utilisateur ou mot de passe incorrect.";
-    }
-}
+// Vérifier l'état de connexion pour le lien
+$is_authenticated = isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true;
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Connexion</title>
+    <title>Accueil Atelier 3</title>
 </head>
 <body>
-    <h1>Atelier authentification par Session</h1>
-    <h3>La page <a href="page_admin.php">page_admin.php</a> de cet atelier 3 est inaccéssible tant que vous ne vous serez pas connecté avec le login 'admin' et mot de passe 'secret'</h3>
-    <form method="POST" action="">
-        <label for="username">Nom d'utilisateur :</label>
-        <input type="text" id="username" name="username" required>
-        <br><br>
-        <label for="password">Mot de passe :</label>
-        <input type="password" id="password" name="password" required>
-        <br><br>
-        <button type="submit">Se connecter</button>
-    </form>
+    <h1>Accueil de l'Atelier 3</h1>
+    
+    <p style="font-size: 1.2em; color: navy;">
+        Vous avez visité cette page d'accueil **<?php echo $count; ?>** fois.
+    </p>
+    <hr>
+
+    <h2>Statut de la Session</h2>
+    <?php if ($is_authenticated): ?>
+        <p style="color: green;">Vous êtes connecté en tant que : **<?php echo $_SESSION['username']; ?>**.</p>
+        <p>Allez à <a href="page_admin.php">votre page protégée</a> ou <a href="logout.php">Déconnectez-vous</a>.</p>
+    <?php else: ?>
+        <p style="color: blue;">Vous n'êtes pas connecté.</p>
+        <p>Veuillez vous <a href="login.php">connecter</a> pour accéder aux pages protégées (Ex. 1).</p>
+    <?php endif; ?>
+
     <br>
-    <a href="../index.html">Retour à l'accueil</a>  
+    <a href="../index.html">Retour à l'accueil général</a>
 </body>
 </html>
